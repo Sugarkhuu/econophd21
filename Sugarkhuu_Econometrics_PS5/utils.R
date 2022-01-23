@@ -21,14 +21,27 @@ if_cover <- function(beta_1_true=2, beta_1_est=2,s_beta1=1, n_size=1000,alpha=0.
 
 vcov_beta <- function(beta_est, X, Y){
   # calculate R squared given beta, X and Y
+  n <- length(Y)
+  k <- length(beta_est)
   Y_hat     <- X%*%beta_est
   e_hat     <- Y_hat - Y 
   var_ehat  <- var(e_hat)
-  vcov_beta <- var_ehat[1]*solve((t(X) %*% X))
+  v_beta <- n/(n-k)*var_ehat[1]*solve((t(X) %*% X))
   
   return(vcov_beta)
 } 
 
+vcov_beta_het <- function(beta_est, X, Y){
+  # calculate R squared given beta, X and Y
+  n <- length(Y)
+  k <- length(beta_est)
+  Y_hat     <- X%*%beta_est
+  e_hat     <- Y_hat - Y 
+  D_hat     <- diag(diag(e_hat %*% t(e_hat)))
+  v_beta_het <- n/(n-k)*solve(t(X) %*% X) %*% (t(X) %*% D_hat %*% X) %*% solve(t(X) %*% X)
+  
+  return(vcov_beta_het)
+} 
 
 r_squared <- function(beta_est, X, Y){
   # calculate R squared given beta, X and Y
