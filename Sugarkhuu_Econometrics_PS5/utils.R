@@ -1,9 +1,30 @@
+if_cover <- function(beta_1_true=2, beta_1_est=2,s_beta1=1, n_size=1000,alpha=0.05,ifInt=TRUE) {
+#' Calculate actual coverage probability for exponential distribution
+#' theta - mean value of the distribution
+#' it    - number of different draws
+
+  t_crit <- qt(1-alpha/2,n-3) # 97.5th percentile of t dist with n-3 df
+  
+  if(ifInt){
+    conf_int <- beta_1_est+c(-1,1)*t_crit*s_beta1/sqrt(n_size)
+    # check if within the interval: Boolean
+    ifInside <- rbind(conf_int[1] <= beta_1_true & conf_int[2] >= beta_1_true)
+  } else {
+    conf_int <- beta_1_true+c(-1,1)*t_crit*s_beta1/sqrt(n_size)
+    # check if within the interval: Boolean
+    ifInside <- rbind(conf_int[1] <= beta_1_est & conf_int[2] >= beta_1_est)
+  }
+  conf_int_len <- conf_int[2]-conf_int[1]
+
+  return(ifInside,conf_int_len)
+}
+
 vcov_beta <- function(beta_est, X, Y){
   # calculate R squared given beta, X and Y
   Y_hat     <- X%*%beta_est
   e_hat     <- Y_hat - Y 
-  std_ehat  <- std(e_hat)
-  vcov_beta <- std_ehat*solve((t(X) %*% X))
+  var_ehat  <- var(e_hat)
+  vcov_beta <- var_ehat[1]*solve((t(X) %*% X))
   
   return(vcov_beta)
 } 
@@ -49,7 +70,11 @@ my_estimator <- function(rho=0.7,n=1000) {
   
   beta_est <- my_ols(X,Y) # estimate the betas
   r2 <- r_squared(beta_est, X, Y)            # r squared
+  v_b <- vcov_beta(beta_est, X, Y)            # r squared
+  s_beta1 <- sqrt(v_b[1,1])
+  ifInside <- if_cover(beta_1_true=2, beta_1_est=beta_est[1],s_beta1=s_beta1, n_size=n)  
+  ifHypoTrue <- if_cover(beta_1_true=2, beta_1_est=beta_est[1],s_beta1=s_beta1, n_size=n,alpha=0.01,ifInt=FALSE)   
   
-  return(c(beta_est, r2))
+  return(c(beta_est, r2, ifInside[1],ifInside[2],ifHypoTrue[1] v_b))
   
 }
