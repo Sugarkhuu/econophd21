@@ -15,7 +15,7 @@ ns    <- seq(1000, 10000, 3000)  # grid of n
 vars  <- c("E_beta1","Var_beta1","E_R2") # name of the variables
 times <- 500
 
-vars = c('Within confidence interval','Confidence interval length','HypoH02')
+vars = c('Within confidence interval','Confidence interval length','HypoH02','HypoH018')
 tic()
 
 # save the results of each rho and n for each of the variables

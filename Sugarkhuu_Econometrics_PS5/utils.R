@@ -8,15 +8,15 @@ if_cover <- function(beta_1_true=2, beta_1_est=2,s_beta1=1, n_size=1000,alpha=0.
   if(ifInt){
     conf_int <- beta_1_est+c(-1,1)*t_crit*s_beta1/sqrt(n_size)
     # check if within the interval: Boolean
-    ifInside <- rbind(conf_int[1] <= beta_1_true & conf_int[2] >= beta_1_true)
+    ifInside <- rbind(conf_int[1] <= beta_1_true & beta_1_true <= conf_int[2])
   } else {
     conf_int <- beta_1_true+c(-1,1)*t_crit*s_beta1/sqrt(n_size)
     # check if within the interval: Boolean
-    ifInside <- rbind(conf_int[1] <= beta_1_est & conf_int[2] >= beta_1_est)
+    ifInside <- rbind(conf_int[1] <= beta_1_est & beta_1_est <= conf_int[2])
   }
   conf_int_len <- conf_int[2]-conf_int[1]
 
-  return(ifInside,conf_int_len)
+  return(c(ifInside,conf_int_len))
 }
 
 vcov_beta <- function(beta_est, X, Y){
@@ -73,8 +73,9 @@ my_estimator <- function(rho=0.7,n=1000) {
   v_b <- vcov_beta(beta_est, X, Y)            # r squared
   s_beta1 <- sqrt(v_b[1,1])
   ifInside <- if_cover(beta_1_true=2, beta_1_est=beta_est[1],s_beta1=s_beta1, n_size=n)  
-  ifHypoTrue <- if_cover(beta_1_true=2, beta_1_est=beta_est[1],s_beta1=s_beta1, n_size=n,alpha=0.01,ifInt=FALSE)   
+  ifHypo2True <- if_cover(beta_1_true=2, beta_1_est=beta_est[1],s_beta1=s_beta1, n_size=n,alpha=0.01,ifInt=FALSE)   
+  ifHypo18True <- if_cover(beta_1_true=1.8, beta_1_est=beta_est[1],s_beta1=s_beta1, n_size=n,alpha=0.01,ifInt=FALSE)   
   
-  return(c(beta_est, r2, ifInside[1],ifInside[2],ifHypoTrue[1] v_b))
+  return(c(beta_est, r2, ifInside[1],ifInside[2],ifHypo2True[1],ifHypo18True[1]))
   
 }
