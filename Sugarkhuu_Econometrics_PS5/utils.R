@@ -1,4 +1,4 @@
-if_cover <- function(beta_1_true=2, beta_1_est=2,s_beta1=1, n_size=1000,alpha=0.05,ifInt=TRUE) {
+conf_interval <- function(beta_true=2, beta_est=2,s_beta=1, n_size=1,alpha=0.05,ifInt=TRUE) {
 #' Calculate actual coverage probability for exponential distribution
 #' theta - mean value of the distribution
 #' it    - number of different draws
@@ -6,17 +6,20 @@ if_cover <- function(beta_1_true=2, beta_1_est=2,s_beta1=1, n_size=1000,alpha=0.
   t_crit <- qt(1-alpha/2,n-3) # 97.5th percentile of t dist with n-3 df
   
   if(ifInt){
-    conf_int <- beta_1_est+c(-1,1)*t_crit*s_beta1/sqrt(n_size)
+    conf_int <- beta_est+c(-1,1)*t_crit*s_beta/sqrt(n_size)
     # check if within the interval: Boolean
-    ifInside <- rbind(conf_int[1] <= beta_1_true & beta_1_true <= conf_int[2])
+    ifInside <- rbind(conf_int[1] <= beta_true & beta_true <= conf_int[2])
   } else {
-    conf_int <- beta_1_true+c(-1,1)*t_crit*s_beta1/sqrt(n_size)
+    conf_int <- beta_true+c(-1,1)*t_crit*s_beta/sqrt(n_size)
     # check if within the interval: Boolean
-    ifInside <- rbind(conf_int[1] <= beta_1_est & beta_1_est <= conf_int[2])
+    ifInside <- rbind(conf_int[1] <= beta_est & beta_est <= conf_int[2])
   }
   conf_int_len <- conf_int[2]-conf_int[1]
+  
+  t_stat <- abs((beta_est - beta_true)/(s_beta/sqrt(n_size)))
+  p_value <- 2*(1-pt(t_stat,n-3))
 
-  return(c(ifInside,conf_int_len))
+  return(c(ifInside,conf_int_len,conf_int,p_value))
 }
 
 vcov_beta <- function(beta_est, X, Y){
@@ -28,7 +31,7 @@ vcov_beta <- function(beta_est, X, Y){
   var_ehat  <- var(e_hat)
   v_beta <- n/(n-k)*var_ehat[1]*solve((t(X) %*% X))
   
-  return(vcov_beta)
+  return(v_beta)
 } 
 
 vcov_beta_het <- function(beta_est, X, Y){
@@ -40,7 +43,16 @@ vcov_beta_het <- function(beta_est, X, Y){
   D_hat     <- diag(diag(e_hat %*% t(e_hat)))
   v_beta_het <- n/(n-k)*solve(t(X) %*% X) %*% (t(X) %*% D_hat %*% X) %*% solve(t(X) %*% X)
   
-  return(vcov_beta_het)
+  return(v_beta_het)
+} 
+
+sigma_error <- function(beta_est, X, Y){
+  # calculate R squared given beta, X and Y
+  Y_hat  <- X%*%beta_est
+  e_hat  <- Y_hat - Y 
+  sigma_ehat <- sqrt(mean(e_hat^2))
+ 
+  return(sigma_ehat)
 } 
 
 r_squared <- function(beta_est, X, Y){
@@ -84,10 +96,10 @@ my_estimator <- function(rho=0.7,n=1000) {
   beta_est <- my_ols(X,Y) # estimate the betas
   r2 <- r_squared(beta_est, X, Y)            # r squared
   v_b <- vcov_beta(beta_est, X, Y)            # r squared
-  s_beta1 <- sqrt(v_b[1,1])
-  ifInside <- if_cover(beta_1_true=2, beta_1_est=beta_est[1],s_beta1=s_beta1, n_size=n)  
-  ifHypo2True <- if_cover(beta_1_true=2, beta_1_est=beta_est[1],s_beta1=s_beta1, n_size=n,alpha=0.01,ifInt=FALSE)   
-  ifHypo18True <- if_cover(beta_1_true=1.8, beta_1_est=beta_est[1],s_beta1=s_beta1, n_size=n,alpha=0.01,ifInt=FALSE)   
+  s_beta <- sqrt(v_b[1,1])
+  ifInside <- conf_interval(beta_true=2, beta_est=beta_est[1],s_beta=s_beta, n_size=n)  
+  ifHypo2True <- conf_interval(beta_true=2, beta_est=beta_est[1],s_beta=s_beta, n_size=n,alpha=0.01,ifInt=FALSE)   
+  ifHypo18True <- conf_interval(beta_true=1.8, beta_est=beta_est[1],s_beta=s_beta, n_size=n,alpha=0.01,ifInt=FALSE)   
   
   return(c(beta_est, r2, ifInside[1],ifInside[2],ifHypo2True[1],ifHypo18True[1]))
   
