@@ -15,10 +15,15 @@ Y <- as.matrix(df["mrate"])
 n <- length(Y)
 
 # results
+
+## a
 beta_est <- my_ols(X,Y)                    # beta OLS
 
-v_b <- vcov_beta(beta_est, X, Y)
-v_b_het <- vcov_beta_het(beta_est, X, Y)
+
+## b
+
+v_b <- vcov_beta(beta_est, X, Y)           # homosk. vcov matrix of betas
+v_b_het <- vcov_beta_het(beta_est, X, Y)   # heterosk. vcov matrix of betas
 
 # summary matrix
 rows <- c("beta_1","beta_2","beta_3","beta_4")
@@ -33,8 +38,11 @@ for(j in 1:length(beta_est)){
   beta_est_i <- beta_est[j]
   s_beta_hom <- sqrt(v_b[j,j])
   s_beta_het <- sqrt(v_b_het[j,j])
-  result_hom <- conf_interval(beta_true=beta_test, beta_est=beta_est_i,s_beta=s_beta_hom, n_size=n,alpha=0.05,ifInt=FALSE)  
-  result_het <- conf_interval(beta_true=beta_test, beta_est=beta_est_i,s_beta=s_beta_het, n_size=n,alpha=0.05,ifInt=FALSE)  
+
+  # confidence interval around 0
+  result_hom <- conf_interval(beta_true=beta_test, beta_est=beta_est_i,s_beta=s_beta_hom, n_size=n,alpha=0.05) # ,ifInt=FALSE  
+  result_het <- conf_interval(beta_true=beta_test, beta_est=beta_est_i,s_beta=s_beta_het, n_size=n,alpha=0.05) # ,ifInt=FALSE  
+
   lower_hom  <- beta_test + result_hom[3]
   upper_hom  <- beta_test + result_hom[4]
   lower_het  <- beta_test + result_het[3]
@@ -46,62 +54,63 @@ for(j in 1:length(beta_est)){
   mat_het[j,] <- c(beta_est[j],s_beta_het,beta_test,lower_het, upper_het,p_value_het)         # avg*2 estimates
 }
 
+print("Results for 2b: ")
 print(mat_hom)
 print(mat_het)
 
-## c
+## c - It is actually available in the above table. Here just to make it easier to see how it is done.
+alpha <- 0.05
+t_crit <- qt(1-alpha/2,length(Y)-4)
 beta_i <- 2
-beta_test <- beta_est[beta_i]
 beta_est_i  <- beta_est[beta_i]
 s_beta_hom <- sqrt(v_b[beta_i,beta_i])
 s_beta_het <- sqrt(v_b_het[beta_i,beta_i])
-result_hom <- conf_interval(beta_true=beta_test, beta_est=beta_est_i,s_beta=s_beta_hom, n_size=n,alpha=0.05)  
-result_het <- conf_interval(beta_true=beta_test, beta_est=beta_est_i,s_beta=s_beta_het, n_size=n,alpha=0.05)  
-lower_hom  <- result_hom[3]
-upper_hom  <- result_hom[4]
-lower_het  <- result_het[3]
-upper_het  <- result_het[4]
+lower_hom <- beta_est_i - t_crit*s_beta_hom
+upper_hom <- beta_est_i + t_crit*s_beta_hom
+lower_het <- beta_est_i - t_crit*s_beta_het
+upper_het <- beta_est_i + t_crit*s_beta_het
 
 
-## d
+print(paste("Lower bound of beta 2 (homosk.):   ",   round(lower_hom,3)))
+print(paste("Upper bound of beta 2 (homosk.):   ",   round(upper_hom,3)))
+print(paste("Lower bound of beta 2 (heterosk.):   ", round(lower_het,3)))
+print(paste("Upper bound of beta 2 (heterosk.):   ", round(upper_het,3)))
+
+
+
+## d Assuming homosk.
 cntr <- c(85,46,6,1)
 mrate_hat <- t(beta_est) %*% cntr
-sigma_ehat <- sigma_error(beta_est, X, Y)
-tmp <- conf_interval(beta_est=mrate_hat,s_beta=sigma_ehat,alpha=0.05)  
-conf_int_theta <- tmp[3:4]
+sigma_hat_hom <- sqrt(t(cntr)%*%v_b%*%cntr)
+sigma_hat_het <- sqrt(t(cntr)%*%v_b_het%*%cntr)
+alpha <- 0.05
+t_crit <- qt(1-alpha/2,length(Y)-4)
+lower_theta_hom <- mrate_hat - t_crit*sigma_hat_hom
+upper_theta_hom <- mrate_hat + t_crit*sigma_hat_hom
+lower_theta_het <- mrate_hat - t_crit*sigma_hat_het
+upper_theta_het <- mrate_hat + t_crit*sigma_hat_het
+
 
 ## e
 cntr_0 <- c(85,46,6,0)
 X <- X - matrix(cntr_0, nrow=dim(X)[1], ncol=length(cntr), byrow=TRUE)
-
 beta_est_theta <- my_ols(X,Y)                    # beta OLS
 
 # assert 
 stopifnot(round((t(beta_est) %*% cntr),3) == round(beta_est_theta[4],3))
 
-# f
+## f
 R_vec <- c(1,10,0,0)
 betas <- beta_est
 
 theta_test <- 0
 theta_hat <- t(R_vec) %*% betas
 
-# sigma*R'*Vb*R
-sd_theta <- sigma_ehat[1]*sqrt((t(R_vec) %*% solve((t(X) %*% X)) %*% R_vec)/n)
+# v_theta
+v_theta_hom <- (t(R_vec) %*% v_b %*% R_vec)
+v_theta_het <- (t(R_vec) %*% v_b_het %*% R_vec)
 
-t_stat <- (theta_hat- theta_test)/sd_theta
+wald_stat_hom <- (theta_hat- theta_test)%*%solve(v_theta_hom)%*%(theta_hat- theta_test)
+wald_stat_het <- (theta_hat- theta_test)%*%solve(v_theta_het)%*%(theta_hat- theta_test)
 
-pt(t_stat,n-length(betas))
-
-# print(beta_est)
-# print(r2)
-
-# dfa <- melt(df[c("water","rural","health_gdp","mrate")],  id.vars = 'mrate', variable.name = 'series')
-
-# #create line plot for each column in data frame
-# ggplot(dfa, aes(value,mrate)) +
-#   geom_point() +
-#   geom_smooth(formula = y ~ x, method = "lm") +
-#   facet_grid(. ~ series, scales = "free")
-
-# ggsave(paste("mrate_scatter", ".png", sep=""))
+wald_crit <- qchisq(0.95,1)

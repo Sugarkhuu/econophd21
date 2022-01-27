@@ -2,22 +2,25 @@ conf_interval <- function(beta_true=2, beta_est=2,s_beta=1, n_size=1,alpha=0.05,
 #' Calculate actual coverage probability for exponential distribution
 #' theta - mean value of the distribution
 #' it    - number of different draws
+  n <- n_size
+  k <- 3
 
-  t_crit <- qt(1-alpha/2,n-3) # 97.5th percentile of t dist with n-3 df
+
+  t_crit <- qt(1-alpha/2,n-k) # percentile of t dist with n-3 df
   
   if(ifInt){
-    conf_int <- beta_est+c(-1,1)*t_crit*s_beta/sqrt(n_size)
+    conf_int <- beta_est+c(-1,1)*t_crit*s_beta 
     # check if within the interval: Boolean
     ifInside <- rbind(conf_int[1] <= beta_true & beta_true <= conf_int[2])
   } else {
-    conf_int <- beta_true+c(-1,1)*t_crit*s_beta/sqrt(n_size)
+    conf_int <- beta_true+c(-1,1)*t_crit*s_beta 
     # check if within the interval: Boolean
     ifInside <- rbind(conf_int[1] <= beta_est & beta_est <= conf_int[2])
   }
   conf_int_len <- conf_int[2]-conf_int[1]
   
-  t_stat <- abs((beta_est - beta_true)/(s_beta/sqrt(n_size)))
-  p_value <- 2*(1-pt(t_stat,n-3))
+  t_stat <- abs((beta_est - beta_true)/(s_beta)) 
+  p_value <- 2*(1-pt(t_stat,n-k))
 
   return(c(ifInside,conf_int_len,conf_int,p_value))
 }
@@ -47,7 +50,7 @@ vcov_beta_het <- function(beta_est, X, Y){
 } 
 
 sigma_error <- function(beta_est, X, Y){
-  # calculate R squared given beta, X and Y
+  # calculate sigma of error given beta, X and Y
   Y_hat  <- X%*%beta_est
   e_hat  <- Y_hat - Y 
   sigma_ehat <- sqrt(mean(e_hat^2))
@@ -94,13 +97,14 @@ my_estimator <- function(rho=0.7,n=1000) {
   Y <- X %*% beta + e                        # draws of Y. Now, the observed values. 
   
   beta_est <- my_ols(X,Y) # estimate the betas
-  r2 <- r_squared(beta_est, X, Y)            # r squared
-  v_b <- vcov_beta(beta_est, X, Y)            # r squared
-  s_beta <- sqrt(v_b[1,1])
-  ifInside <- conf_interval(beta_true=2, beta_est=beta_est[1],s_beta=s_beta, n_size=n)  
-  ifHypo2True <- conf_interval(beta_true=2, beta_est=beta_est[1],s_beta=s_beta, n_size=n,alpha=0.01,ifInt=FALSE)   
-  ifHypo18True <- conf_interval(beta_true=1.8, beta_est=beta_est[1],s_beta=s_beta, n_size=n,alpha=0.01,ifInt=FALSE)   
+  r2 <- r_squared(beta_est, X, Y)            
+  v_b <- vcov_beta(beta_est, X, Y)           
+  s_beta <- sqrt(v_b[1,1])               # std of beta1
+  ifInside <- conf_interval(beta_est=beta_est[1],s_beta=s_beta, n_size=n)  # confidence interval
+  ifHypo2True <- conf_interval(beta_true=2, beta_est=beta_est[1],s_beta=s_beta, n_size=n,alpha=0.01,ifInt=FALSE)     # hypothesis testing 
+  ifHypo18True <- conf_interval(beta_true=1.8, beta_est=beta_est[1],s_beta=s_beta, n_size=n,alpha=0.01,ifInt=FALSE)  # hypothesis testing  
   
-  return(c(beta_est, r2, ifInside[1],ifInside[2],ifHypo2True[1],ifHypo18True[1]))
+  # betas, R2, if in interval, interval length,  if null true, if null true
+  return(c(beta_est, r2, ifInside[1],ifInside[2],1-ifHypo2True[1],1-ifHypo18True[1]))
   
 }
