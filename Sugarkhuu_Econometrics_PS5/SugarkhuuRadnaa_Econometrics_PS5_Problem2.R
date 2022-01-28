@@ -110,7 +110,7 @@ theta_hat <- t(R_vec) %*% betas
 v_theta_hom <- (t(R_vec) %*% v_b %*% R_vec)
 v_theta_het <- (t(R_vec) %*% v_b_het %*% R_vec)
 
-wald_stat_hom <- (theta_hat- theta_test)%*%solve(v_theta_hom)%*%(theta_hat- theta_test)
-wald_stat_het <- (theta_hat- theta_test)%*%solve(v_theta_het)%*%(theta_hat- theta_test)
+wald_stat_hom <- n*(theta_hat- theta_test)%*%solve(v_theta_hom)%*%(theta_hat- theta_test)
+wald_stat_het <- n*(theta_hat- theta_test)%*%solve(v_theta_het)%*%(theta_hat- theta_test)
 
 wald_crit <- qchisq(0.95,1)
